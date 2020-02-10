@@ -6,33 +6,39 @@ use DateTime;
 use Exception;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
-use src\Integration\DataProvider;
+use src\Integration\IDataProvider;
 
 //В большинстве случаев композиция предпочтительнее наследования
 //Необходимо добавить PHPDOC для класса и его свойств
 //Если необходим некий общий интерфейс то наследование можно заменить реализацией интерфейса
-class DecoratorManager extends DataProvider
+
+/**
+ * Class DecoratorManager
+ * @package src\Decorator
+ */
+class DecoratorManager implements IDataProvider
 {
     //Желательно сделать свойства приватными по умолчанию, доступ только через geter/setter'ы.
-    public $cache;
-    public $logger;
+    /** @var IDataProvider */
+    private $dataProvider;
+
+    /** @var CacheItemPoolInterface */
+    private $cache;
+
+    /** @var LoggerInterface */
+    private $logger;
 
     /**
-     * @param string $host
-     * @param string $user
-     * @param string $password
+     * @param IDataProvider $dataProvider
      * @param CacheItemPoolInterface $cache
+     * @param LoggerInterface $logger
      */
     //Необходимо добавить типы для всех аргументов
-    public function __construct($host, $user, $password, CacheItemPoolInterface $cache)
+    //logger лучше не делать опцинальным, так как некуда будет писать ошибки поэтому добавляем в конструктор
+    public function __construct(IDataProvider $dataProvider, CacheItemPoolInterface $cache, LoggerInterface $logger)
     {
-        parent::__construct($host, $user, $password);
+        $this->dataProvider = $dataProvider;
         $this->cache = $cache;
-    }
-
-    //logger лучше не делать опцинальным, так как некуда будет писать ошибки
-    public function setLogger(LoggerInterface $logger)
-    {
         $this->logger = $logger;
     }
 
@@ -40,16 +46,18 @@ class DecoratorManager extends DataProvider
      * {@inheritdoc}
      */
     //Необходимо добавить возвращаемый тип данных
-    public function getResponse(array $input)
+    //заменили $input на $request для большей читабельности и унификации интерфейса
+    public function getResponse(array $request): array
     {
+        $result = []; //На всякий случай если вылетит exception и $result не будет инициализирован
         try {
-            $cacheKey = $this->getCacheKey($input);
+            $cacheKey = $this->getCacheKey($request);
             $cacheItem = $this->cache->getItem($cacheKey);
             if ($cacheItem->isHit()) {
                 return $cacheItem->get();
             }
 
-            $result = parent::get($input);
+            $result = $this->dataProvider->getResponse($request);
 
             $cacheItem
                 ->set($result)
@@ -57,19 +65,25 @@ class DecoratorManager extends DataProvider
                     (new DateTime())->modify('+1 day')
                 );
             //Необходимо сохранить $cacheItem в $cache
-            return $result;
+            if (!$this->cache->save($cacheItem)) {
+                $this->logger->warning('Could save cache for: ' . json_encode($request));
+            }
         } catch (Exception $e) {
             //Для лучшей отладки необходимо логгировать само сообщение $e->getMessage()
-            $this->logger->critical('Error');
+            $this->logger->critical($e->getMessage());
         }
         //В случае ошибки доступа к api лучше вернуть сам результат для информативности
-        return [];
+        return $result;
     }
 
-    //Необходимо добавить возвращаемый тип данных
-    public function getCacheKey(array $input)
+    /**
+     * @param array $input
+     * @return string
+     */
+    //Необходимо добавить возвращаемый тип данных и PHPDoc
+    public function getCacheKey(array $input): string
     {
         //Если input достаточно длинный то можно генерировать на его основе хеш, но это опционально
-        return json_encode($input);
+        return sha1(json_encode($input));
     }
 }

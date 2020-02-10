@@ -1,11 +1,22 @@
 <?php
 
 namespace src\Integration;
+
 //Необходимо добавить PHPDOC для класса и его свойств
-class DataProvider
+/**
+ * Class DataProvider
+ * @package src\Integration
+ */
+//Добавили интерфейс для большей гибкости
+class DataProvider implements IDataProvider
 {
+    /** @var string */
     private $host;
+
+    /** @var string */
     private $user;
+
+    /** @var string */
     private $password;
 
     /**
@@ -14,7 +25,7 @@ class DataProvider
      * @param $password
      */
     //Необходимо добавить типы для всех аргументов и тип возвращаемого значения
-    public function __construct($host, $user, $password)
+    public function __construct(string $host, string $user, string $password)
     {
         $this->host = $host;
         $this->user = $user;
@@ -23,12 +34,11 @@ class DataProvider
 
     /**
      * @param array $request
-     *
      * @return array
      */
     //Лучше назвать метод getResponse для большей прозрачности, также как и в дочернем классе
     //метод с таким названием в данном случае переподелит его в дочернем классе, но данном случае это не страшно
-    public function get(array $request) // добавить тип возвращаемого значения
+    public function getResponse(array $request): array // добавить тип возвращаемого значения
     {
         // returns a response from external service
     }
