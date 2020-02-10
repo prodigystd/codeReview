@@ -1,7 +1,7 @@
 <?php
 
 namespace src\Integration;
-
+//Необходимо добавить PHPDOC для класса и его свойств
 class DataProvider
 {
     private $host;
@@ -13,6 +13,7 @@ class DataProvider
      * @param $user
      * @param $password
      */
+    //Необходимо добавить типы для всех аргументов и тип возвращаемого значения
     public function __construct($host, $user, $password)
     {
         $this->host = $host;
@@ -25,8 +26,11 @@ class DataProvider
      *
      * @return array
      */
-    public function get(array $request)
+    //Лучше назвать метод getResponse для большей прозрачности, также как и в дочернем классе
+    //метод с таким названием в данном случае переподелит его в дочернем классе, но данном случае это не страшно
+    public function get(array $request) // добавить тип возвращаемого значения
     {
         // returns a response from external service
     }
+
 }
